@@ -6,6 +6,16 @@ import vueDevTools from 'vite-plugin-vue-devtools'
 
 // https://vite.dev/config/
 export default defineConfig({
+  server: {
+    watch: {
+      usePolling: true,
+    }
+  },
+
+  hmr: {
+    protocol: 'wss',
+  },
+
   plugins: [
     vue(),
     vueDevTools(),
