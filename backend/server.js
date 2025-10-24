@@ -30,10 +30,11 @@ const savePost = async (postData) => {
   return newPost;
 };
 
-const saveNotification = async (title) => {
+const saveNotification = async (post) => {
   const notification = {
-    message: `Novo post criado: "${title}"`,
-    date: new Date().toISOString()
+    message: `Novo post criado: "${post.title}"`,
+    date: new Date().toISOString(),
+    postId: post._id.toString()
   };
   await sendNotification(notification);
   return notification;
@@ -57,7 +58,7 @@ app.post('/api/posts', async (req, res) => {
 
   try {
     const newPost = await savePost(req.body);
-    await saveNotification(newPost.title);
+    await saveNotification(newPost);
     res.status(201).json(newPost);
   } catch (error) {
     res.status(500).json({ error: "Erro interno ao salvar o post.", details: error.message });
@@ -67,8 +68,14 @@ app.post('/api/posts', async (req, res) => {
 app.delete('/api/posts/:id', async (req, res) => {
   const postId = req.params.id;
   try {
-    const result = await Post.findByIdAndDelete(postId);
-    if (result) {
+    const deletedPost = await Post.findByIdAndDelete(postId);
+    if (deletedPost) {
+      const deletionNotification = {
+        message: `O post "${deletedPost.title}" foi excluído.`,
+        date: new Date().toISOString(),
+        postId: deletedPost._id.toString()
+      };
+      await sendNotification(deletionNotification); // envia para RabbitMQ
       res.status(200).json({ message: `Post com ID ${postId} excluído com sucesso.` });
     } else {
       res.status(404).json({ error: `Post com ID ${postId} não encontrado.` });
