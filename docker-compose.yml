@@ -1,0 +1,74 @@
+version: "3.9"
+
+services:
+  backend:
+    build: ./backend
+    container_name: notify-blog-backend
+    command: node server.js
+    ports:
+      - "3000:3000"
+    environment:
+      - MONGO_URI=mongodb://admin:admin123@mongodb:27017/notify-blog?authSource=admin
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
+    volumes:
+      - ./backend:/app           # Código fonte do host
+      - /app/node_modules        # node_modules isolado no container
+    depends_on:
+      - mongodb
+      - rabbitmq
+
+  consumer:
+    build: ./backend
+    container_name: notify-blog-consumer
+    command: node consumer.js
+    environment:
+      - MONGO_URI=mongodb://admin:admin123@mongodb:27017/notify-blog?authSource=admin
+      - RABBITMQ_URL=amqp://guest:guest@rabbitmq:5672
+    volumes:
+      - ./backend:/app
+      - /app/node_modules
+    depends_on:
+      - mongodb
+      - rabbitmq
+
+  frontend:
+    build: ./frontend
+    container_name: notify-blog-frontend
+    command: npm run dev -- --host
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    depends_on:
+      - backend
+
+  mongodb:
+    image: mongo:6.0
+    container_name: notify-blog-mongodb
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: admin
+      MONGO_INITDB_ROOT_PASSWORD: admin123
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo-data:/data/db
+
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: notify-blog-rabbitmq
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmqctl", "status"]
+      interval: 5s
+      retries: 5
+
+volumes:
+  mongo-data:
